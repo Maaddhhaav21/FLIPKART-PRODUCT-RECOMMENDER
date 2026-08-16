@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: FLIPKART-RECOMMENDER
+Version: 0.1
+Author: Madhav Manojlear
+Requires-Dist: langchain
+Requires-Dist: langchain-astradb
+Requires-Dist: langchain-huggingface
+Requires-Dist: langchain-groq
+Requires-Dist: langchain-community
+Requires-Dist: datasets
+Requires-Dist: pypdf
+Requires-Dist: python-dotenv
+Requires-Dist: pandas
+Requires-Dist: flask
+Requires-Dist: prometheus_client
+Dynamic: author
+Dynamic: requires-dist
