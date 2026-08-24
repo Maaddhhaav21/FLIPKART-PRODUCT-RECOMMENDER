@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Flipkart Product Assistant</title>
+
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}"/>
+</head>
+
+<body>
+	<div class="app-shell">
+		<div class="chat-window">
+
+			<!-- Header -->
+			<div class="chat-header">
+				<div class="brand">
+					<div class="brand-mark">
+						<svg viewBox="0 0 24 24" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M6 7h12l-1.2 10.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8L6 7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+							<path d="M9 7a3 3 0 0 1 6 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+						</svg>
+					</div>
+					<div class="brand-copy">
+						<span class="brand-name">Flipkart Assistant</span>
+						<span class="brand-status"><i class="status-dot"></i>Online · finding you the best deals</span>
+					</div>
+				</div>
+				<button class="icon-btn" id="clearChat" title="Clear conversation" aria-label="Clear conversation">
+					<i class="fas fa-redo-alt"></i>
+				</button>
+			</div>
+
+			<!-- Quick intents -->
+			<div class="quick-chips" id="quickChips">
+				<button type="button" class="chip" data-msg="Show me trending products">🔥 Trending</button>
+				<button type="button" class="chip" data-msg="Recommend electronics under 20000">📱 Electronics</button>
+				<button type="button" class="chip" data-msg="Show fashion deals for me">👗 Fashion</button>
+				<button type="button" class="chip" data-msg="What offers are live today?">🏷️ Today's Deals</button>
+			</div>
+
+			<!-- Messages -->
+			<div id="messageFormeight" class="msg_card_body" aria-live="polite">
+				<div class="d-flex justify-content-start mb-4 msg-row">
+					<div class="img_cont_msg">
+						<div class="avatar-bot"><i class="fas fa-shopping-bag"></i></div>
+					</div>
+					<div class="msg_cotainer">
+						Hi! I'm your Flipkart shopping assistant. Tell me what you're looking for — a product, a budget, or a category — and I'll find options for you.
+						<span class="msg_time">now</span>
+					</div>
+				</div>
+			</div>
+
+			<!-- Composer -->
+			<div class="chat-footer">
+				<form id="messageArea" class="input-group" autocomplete="off">
+					<input type="text" id="text" name="msg" placeholder="Ask about a product, brand, or budget…" autocomplete="off" class="form-control type_msg" required/>
+					<div class="input-group-append">
+						<button type="submit" id="send" class="send_btn" aria-label="Send message">
+							<i class="fas fa-paper-plane"></i>
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+	<script>
+		$(document).ready(function () {
+
+			function currentTime() {
+				const date = new Date();
+				let hour = date.getHours();
+				const minute = date.getMinutes().toString().padStart(2, "0");
+				const ampm = hour >= 12 ? "PM" : "AM";
+				hour = hour % 12 || 12;
+				return hour + ":" + minute + " " + ampm;
+			}
+
+			function scrollToBottom() {
+				const body = document.getElementById("messageFormeight");
+				body.scrollTop = body.scrollHeight;
+			}
+
+			function appendUserMessage(text) {
+				const html = `
+					<div class="d-flex justify-content-end mb-4 msg-row">
+						<div class="msg_cotainer_send">
+							${$('<div>').text(text).html()}
+							<span class="msg_time_send">${currentTime()}</span>
+						</div>
+						<div class="img_cont_msg">
+							<div class="avatar-user"><i class="fas fa-user"></i></div>
+						</div>
+					</div>`;
+				$("#messageFormeight").append(html);
+				scrollToBottom();
+			}
+
+			function showTyping() {
+				const html = `
+					<div class="d-flex justify-content-start mb-4 msg-row typing-row" id="typingRow">
+						<div class="img_cont_msg">
+							<div class="avatar-bot"><i class="fas fa-shopping-bag"></i></div>
+						</div>
+						<div class="msg_cotainer typing-bubble">
+							<span class="dot"></span><span class="dot"></span><span class="dot"></span>
+						</div>
+					</div>`;
+				$("#messageFormeight").append(html);
+				scrollToBottom();
+			}
+
+			function removeTyping() {
+				$("#typingRow").remove();
+			}
+
+			// Renders either a plain-text/HTML reply, or, if the backend returns
+			// a JSON payload like { type: "products", items: [ {name, price,
+			// mrp, discount, rating, image, url}, ... ] }, a product-card strip.
+			function appendBotMessage(raw) {
+				let payload = raw;
+				try { payload = JSON.parse(raw); } catch (e) { /* plain text/html reply */ }
+
+				let inner;
+				if (payload && payload.type === "products" && Array.isArray(payload.items)) {
+					const cards = payload.items.map(function (p) {
+						const discountBadge = p.discount ? `<span class="pc-discount">${p.discount}% off</span>` : "";
+						const mrp = p.mrp ? `<span class="pc-mrp">₹${p.mrp}</span>` : "";
+						const rating = p.rating ? `<span class="pc-rating"><i class="fas fa-star"></i>${p.rating}</span>` : "";
+						const link = p.url ? `href="${p.url}" target="_blank" rel="noopener"` : "";
+						return `
+							<a class="product-card" ${link}>
+								<div class="pc-img">${p.image ? `<img src="${p.image}" alt="${p.name}">` : `<i class="fas fa-box-open"></i>`}</div>
+								<div class="pc-name">${p.name}</div>
+								<div class="pc-price-row"><span class="pc-price">₹${p.price}</span>${mrp}</div>
+								<div class="pc-meta-row">${rating}${discountBadge}</div>
+							</a>`;
+					}).join("");
+					inner = `${payload.message ? `<div class="pc-lead">${payload.message}</div>` : ""}<div class="product-strip">${cards}</div>`;
+				} else {
+					inner = (payload && payload.message) ? payload.message : raw;
+				}
+
+				const html = `
+					<div class="d-flex justify-content-start mb-4 msg-row">
+						<div class="img_cont_msg">
+							<div class="avatar-bot"><i class="fas fa-shopping-bag"></i></div>
+						</div>
+						<div class="msg_cotainer">
+							${inner}
+							<span class="msg_time">${currentTime()}</span>
+						</div>
+					</div>`;
+				$("#messageFormeight").append($.parseHTML(html));
+				scrollToBottom();
+			}
+
+			function sendMessage(rawText) {
+				if (!rawText || !rawText.trim()) return;
+				appendUserMessage(rawText);
+				$("#text").val("");
+				showTyping();
+
+				$.ajax({
+					data: { msg: rawText },
+					type: "POST",
+					url: "/get",
+				}).done(function (data) {
+					removeTyping();
+					appendBotMessage(data);
+				}).fail(function () {
+					removeTyping();
+					appendBotMessage("Sorry, something went wrong reaching the assistant. Please try again.");
+				});
+			}
+
+			$("#messageArea").on("submit", function (event) {
+				event.preventDefault();
+				sendMessage($("#text").val());
+			});
+
+			$(".chip").on("click", function () {
+				sendMessage($(this).data("msg"));
+			});
+
+			$("#clearChat").on("click", function () {
+				$("#messageFormeight").empty();
+				appendBotMessage("Chat cleared. What would you like to find today?");
+			});
+		});
+	</script>
+</body>
+</html>
